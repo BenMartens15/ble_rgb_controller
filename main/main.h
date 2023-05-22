@@ -3,5 +3,7 @@
 #define MAIN_H
 
 #include "ble.h"
+#include "led.h"
+#include "rgb.h"
 
 #endif

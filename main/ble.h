@@ -21,18 +21,21 @@
 #include "esp_gatt_common_api.h"
 
 #include "sdkconfig.h"
+
+#include "led.h"
+#include "rgb.h"
 /******************************************************************************/
 
 
 /* DEFINES ********************************************************************/
-#define GATTS_TAG "GATTS_DEMO"
+#define GATTS_TAG "BLE"
 
 #define GATTS_SERVICE_UUID_TEST_A   0x00FF
 #define GATTS_CHAR_UUID_TEST_A      0xFF01
 #define GATTS_DESCR_UUID_TEST_A     0x3333
 #define GATTS_NUM_HANDLE_TEST_A     4
 
-#define TEST_DEVICE_NAME            "ESP_GATTS_DEMO"
+#define TEST_DEVICE_NAME            "RGB CONTROLLER"
 #define TEST_MANUFACTURER_DATA_LEN  17
 
 #define GATTS_DEMO_CHAR_VAL_LEN_MAX 0x40
