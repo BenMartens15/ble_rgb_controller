@@ -14,7 +14,25 @@
 ****************************************************************************/
 
 /* INCLUDES *******************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "ble.h"
+#include "esp_bt.h"
+#include "esp_bt_defs.h"
+#include "esp_bt_main.h"
+#include "esp_gap_ble_api.h"
+#include "esp_gatts_api.h"
+#include "esp_gatt_common_api.h"
+#include "esp_log.h"
+#include "esp_system.h"
+#include "freertos/event_groups.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "led.h"
+#include "nvs_flash.h"
+#include "rgb_control.h"
+#include "sdkconfig.h"
 /******************************************************************************/
 
 /* PROTOTYPES *****************************************************************/
@@ -79,8 +97,8 @@ static esp_ble_adv_data_t scan_rsp_data = {
     .set_scan_rsp = true,
     .include_name = true,
     .include_txpower = true,
-    //.min_interval = 0x0006,
-    //.max_interval = 0x0010,
+    .min_interval = 0x0006,
+    .max_interval = 0x0010,
     .appearance = 0x00,
     .manufacturer_len = 0, //TEST_MANUFACTURER_DATA_LEN,
     .p_manufacturer_data =  NULL, //&test_manufacturer[0],
@@ -94,8 +112,8 @@ static esp_ble_adv_data_t scan_rsp_data = {
 #endif /* CONFIG_SET_RAW_ADV_DATA */
 
 static esp_ble_adv_params_t adv_params = {
-    .adv_int_min        = 0x635,
-    .adv_int_max        = 0x645,
+    .adv_int_min        = 0xC80,
+    .adv_int_max        = 0xC80,
     .adv_type           = ADV_TYPE_IND,
     .own_addr_type      = BLE_ADDR_TYPE_PUBLIC,
     //.peer_addr            =
@@ -262,8 +280,12 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         ESP_LOGI(GATTS_TAG, "GATT_WRITE_EVT, conn_id %d, trans_id %d, handle %d", param->write.conn_id, param->write.trans_id, param->write.handle);
         if (!param->write.is_prep){
             ESP_LOGI(GATTS_TAG, "GATT_WRITE_EVT, value len %d, value :", param->write.len);
-            set_color(param->write.value, param->write.len);
             esp_log_buffer_hex(GATTS_TAG, param->write.value, param->write.len);
+            if (param->write.len == 3) {
+                rgb_control_set_colour(param->write.value);
+            }else {
+                ESP_LOGI(GATTS_TAG, "length incorrect");
+            }
             if (gl_profile_tab[PROFILE_A_APP_ID].descr_handle == param->write.handle && param->write.len == 2){
                 uint16_t descr_value = param->write.value[1]<<8 | param->write.value[0];
                 if (descr_value == 0x0001){
@@ -376,7 +398,7 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         conn_params.latency = 0;
         conn_params.max_int = 0x20;    // max_int = 0x20*1.25ms = 40ms
         conn_params.min_int = 0x10;    // min_int = 0x10*1.25ms = 20ms
-        conn_params.timeout = 400;    // timeout = 400*10ms = 4000ms
+        conn_params.timeout = 0x0C80;    // timeout = 400*10ms = 4000ms
         ESP_LOGI(GATTS_TAG, "ESP_GATTS_CONNECT_EVT, conn_id %d, remote %02x:%02x:%02x:%02x:%02x:%02x:",
                  param->connect.conn_id,
                  param->connect.remote_bda[0], param->connect.remote_bda[1], param->connect.remote_bda[2],

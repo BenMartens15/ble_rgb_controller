@@ -1,6 +1,10 @@
 
 /* INCLUDES *******************************************************************/
-#include "rgb.h"
+#include <stdio.h>
+#include "driver/ledc.h"
+#include "esp_err.h"
+#include "esp_log.h"
+#include "rgb_control.h"
 /******************************************************************************/
 
 /* PROTOTYPES *****************************************************************/
@@ -16,7 +20,7 @@
 
 
 /* PUBLIC FUNCTIONS ***********************************************************/
-void pwm_init()
+void rgb_control_pwm_init()
 {
     ESP_LOGI(PWM_TAG, "Create timer");
     // Prepare and then apply the LEDC PWM timer configuration
@@ -31,46 +35,42 @@ void pwm_init()
 
     ESP_LOGI(PWM_TAG, "Configure channels");
     // Prepare and then apply the LEDC PWM channel configuration
-    ledc_channel_config_t pwm0 = {
+    ledc_channel_config_t red_pwm = {
         .speed_mode     = LEDC_MODE,
         .channel        = LEDC_CHANNEL_0,
         .timer_sel      = LEDC_TIMER,
         .intr_type      = LEDC_INTR_DISABLE,
-        .gpio_num       = PWM_PIN1,
+        .gpio_num       = RED_CTRL_PIN,
         .duty           = 0, // Set duty to 0%
         .hpoint         = 0
     };
 
-    ledc_channel_config_t pwm1 = {
+    ledc_channel_config_t green_pwm = {
         .speed_mode     = LEDC_MODE,
         .channel        = LEDC_CHANNEL_1,
         .timer_sel      = LEDC_TIMER,
         .intr_type      = LEDC_INTR_DISABLE,
-        .gpio_num       = PWM_PIN2,
+        .gpio_num       = GREEN_CTRL_PIN,
         .duty           = 0, // Set duty to 0%
         .hpoint         = 0
     };
 
-    ledc_channel_config_t pwm2 = {
+    ledc_channel_config_t blue_pwm = {
         .speed_mode     = LEDC_MODE,
         .channel        = LEDC_CHANNEL_2,
         .timer_sel      = LEDC_TIMER,
         .intr_type      = LEDC_INTR_DISABLE,
-        .gpio_num       = PWM_PIN3,
+        .gpio_num       = BLUE_CTRL_PIN,
         .duty           = 0, // Set duty to 0%
         .hpoint         = 0
     };
-    ESP_ERROR_CHECK(ledc_channel_config(&pwm0));
-    ESP_ERROR_CHECK(ledc_channel_config(&pwm1));
-    ESP_ERROR_CHECK(ledc_channel_config(&pwm2));
+    ESP_ERROR_CHECK(ledc_channel_config(&red_pwm));
+    ESP_ERROR_CHECK(ledc_channel_config(&green_pwm));
+    ESP_ERROR_CHECK(ledc_channel_config(&blue_pwm));
 }
 
-void set_color(uint8_t * value, uint16_t len)
+void rgb_control_set_colour(uint8_t * value)
 {
-    for (int i = 0; i < len; i++) {
-        printf("%d\n", value[i]);
-    }
-
     ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_0, value[0]);
     ledc_update_duty(LEDC_MODE, LEDC_CHANNEL_0);
 

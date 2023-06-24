@@ -2,16 +2,6 @@
 #ifndef LED_H
 #define LED_H
 
-/* INCLUDES *******************************************************************/
-#include <stdio.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "driver/gpio.h"
-#include "esp_log.h"
-#include "sdkconfig.h"
-/******************************************************************************/
-
-
 /* DEFINES ********************************************************************/
 #define LED_TAG "LED"
 
