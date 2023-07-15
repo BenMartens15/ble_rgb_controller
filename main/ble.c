@@ -26,6 +26,7 @@
 #include "esp_gatt_common_api.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_timer.h"
 #include "freertos/event_groups.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -36,6 +37,7 @@
 /******************************************************************************/
 
 /* PROTOTYPES *****************************************************************/
+static void connection_timeout_handler(void * arg);
 static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
@@ -54,6 +56,8 @@ static esp_attr_value_t gatts_demo_char1_val =
 };
 
 static uint8_t adv_config_done = 0;
+
+esp_timer_handle_t connection_timer;
 
 #ifdef CONFIG_SET_RAW_ADV_DATA
 static uint8_t raw_adv_data[] = {
@@ -133,8 +137,12 @@ static struct gatts_profile_inst gl_profile_tab[PROFILE_NUM] = {
 static prepare_type_env_t a_prepare_write_env;
 /******************************************************************************/
 
-
 /* PRIVATE FUNCTIONS **********************************************************/
+static void connection_timeout_handler(void * arg)
+{
+    esp_ble_gatts_close(gl_profile_tab[PROFILE_A_APP_ID].gatts_if, gl_profile_tab[PROFILE_A_APP_ID].conn_id);
+}
+
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
     switch (event) {
@@ -322,13 +330,13 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 
             }
         }
-        example_write_event_env(gatts_if, &a_prepare_write_env, param);
+        write_event_env(gatts_if, &a_prepare_write_env, param);
         break;
     }
     case ESP_GATTS_EXEC_WRITE_EVT:
         ESP_LOGI(GATTS_TAG,"ESP_GATTS_EXEC_WRITE_EVT");
         esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, ESP_GATT_OK, NULL);
-        example_exec_write_event_env(&a_prepare_write_env, param);
+        exec_write_event_env(&a_prepare_write_env, param);
         break;
     case ESP_GATTS_MTU_EVT:
         ESP_LOGI(GATTS_TAG, "ESP_GATTS_MTU_EVT, MTU %d", param->mtu.mtu);
@@ -406,7 +414,20 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         gl_profile_tab[PROFILE_A_APP_ID].conn_id = param->connect.conn_id;
         //start sent the update connection parameters to the peer device.
         esp_ble_gap_update_conn_params(&conn_params);
+        
+        // turn on the connection LED
         led_on();
+        
+        // initialize connection timer     
+        const esp_timer_create_args_t connection_timer_args = {
+            .callback = &connection_timeout_handler,
+            .name = "connection_timer"
+        };
+        ESP_ERROR_CHECK(esp_timer_create(&connection_timer_args, &connection_timer));
+
+        // starting the timer
+        ESP_ERROR_CHECK(esp_timer_start_once(connection_timer, 30000000));
+        ESP_LOGI(GATTS_TAG, "Connection timer started");
         break;
     }
     case ESP_GATTS_DISCONNECT_EVT:
@@ -491,7 +512,7 @@ void ble_init()
     }
 } /* ble_init() */
 
-void example_write_event_env(esp_gatt_if_t gatts_if, prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param){
+void write_event_env(esp_gatt_if_t gatts_if, prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param){
     esp_gatt_status_t status = ESP_GATT_OK;
     if (param->write.need_rsp){
         if (param->write.is_prep){
@@ -533,9 +554,9 @@ void example_write_event_env(esp_gatt_if_t gatts_if, prepare_type_env_t *prepare
             esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, status, NULL);
         }
     }
-} /* example_write_event_env() */
+} /* write_event_env() */
 
-void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param){
+void exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param){
     if (param->exec_write.exec_write_flag == ESP_GATT_PREP_WRITE_EXEC){
         esp_log_buffer_hex(GATTS_TAG, prepare_write_env->prepare_buf, prepare_write_env->prepare_len);
     }else{
@@ -546,5 +567,5 @@ void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble
         prepare_write_env->prepare_buf = NULL;
     }
     prepare_write_env->prepare_len = 0;
-} /* example_exec_write_event_env() */
+} /* exec_write_event_env() */
 /******************************************************************************/
