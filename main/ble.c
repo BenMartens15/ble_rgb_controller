@@ -105,24 +105,6 @@ static esp_ble_adv_data_t adv_data = {
     .set_scan_rsp = false,
     .include_name = true,
     .include_txpower = false,
-    .min_interval = 0x0006, //slave connection min interval, Time = min_interval * 1.25 msec
-    .max_interval = 0x0010, //slave connection max interval, Time = max_interval * 1.25 msec
-    .appearance = 0x00,
-    .manufacturer_len = 0, //TEST_MANUFACTURER_DATA_LEN,
-    .p_manufacturer_data =  NULL, //&test_manufacturer[0],
-    .service_data_len = 0,
-    .p_service_data = NULL,
-    .service_uuid_len = 0,
-    .p_service_uuid = NULL,
-    .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
-};
-// scan response data
-static esp_ble_adv_data_t scan_rsp_data = {
-    .set_scan_rsp = true,
-    .include_name = true,
-    .include_txpower = true,
-    .min_interval = 0x0006,
-    .max_interval = 0x0010,
     .appearance = 0x00,
     .manufacturer_len = 0, //TEST_MANUFACTURER_DATA_LEN,
     .p_manufacturer_data =  NULL, //&test_manufacturer[0],
@@ -327,32 +309,14 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         if (set_dev_name_ret){
             ESP_LOGE(GATTS_TAG, "set device name failed, error code = %x", set_dev_name_ret);
         }
-#ifdef CONFIG_SET_RAW_ADV_DATA
-        esp_err_t raw_adv_ret = esp_ble_gap_config_adv_data_raw(raw_adv_data, sizeof(raw_adv_data));
-        if (raw_adv_ret){
-            ESP_LOGE(GATTS_TAG, "config raw adv data failed, error code = %x ", raw_adv_ret);
-        }
-        adv_config_done |= adv_config_flag;
-        esp_err_t raw_scan_ret = esp_ble_gap_config_scan_rsp_data_raw(raw_scan_rsp_data, sizeof(raw_scan_rsp_data));
-        if (raw_scan_ret){
-            ESP_LOGE(GATTS_TAG, "config raw scan rsp data failed, error code = %x", raw_scan_ret);
-        }
-        adv_config_done |= scan_rsp_config_flag;
-#else
+
         //config adv data
         esp_err_t ret = esp_ble_gap_config_adv_data(&adv_data);
         if (ret){
             ESP_LOGE(GATTS_TAG, "config adv data failed, error code = %x", ret);
         }
         adv_config_done |= adv_config_flag;
-        //config scan response data
-        ret = esp_ble_gap_config_adv_data(&scan_rsp_data);
-        if (ret){
-            ESP_LOGE(GATTS_TAG, "config scan response data failed, error code = %x", ret);
-        }
-        adv_config_done |= scan_rsp_config_flag;
 
-#endif
         esp_ble_gatts_create_service(gatts_if, &gl_profile_tab[PROFILE_A_APP_ID].service_id, GATTS_NUM_HANDLE_TEST_A);
         break;
     case ESP_GATTS_READ_EVT: {
