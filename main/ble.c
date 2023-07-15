@@ -42,6 +42,8 @@
 
 #define PROFILE_NUM 1
 #define PROFILE_A_APP_ID 0
+
+#define CONNECTION_TIMEOUT          30000000 // connection timeout in microseconds
 /******************************************************************************/
 
 /* ENUMS **********************************************************************/
@@ -421,6 +423,9 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
                 }
 
             }
+                // reset the connection timer
+                ESP_ERROR_CHECK(esp_timer_restart(connection_timer, CONNECTION_TIMEOUT));
+                ESP_LOGI(GATTS_TAG, "Connection timer reset");
         }
         write_event_env(gatts_if, &a_prepare_write_env, param);
         break;
@@ -518,7 +523,7 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         ESP_ERROR_CHECK(esp_timer_create(&connection_timer_args, &connection_timer));
 
         // starting the timer
-        ESP_ERROR_CHECK(esp_timer_start_once(connection_timer, 30000000));
+        ESP_ERROR_CHECK(esp_timer_start_once(connection_timer, CONNECTION_TIMEOUT));
         ESP_LOGI(GATTS_TAG, "Connection timer started");
         break;
     }
