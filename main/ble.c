@@ -72,6 +72,18 @@ typedef struct {
 /******************************************************************************/
 
 /* GLOBALS ********************************************************************/
+// main service UUID: f19a2444-96fe-4d87-a476-68a7a8d0b7ba
+uint8_t main_srvc_uuid[ESP_UUID_LEN_128] = {
+    0xba, 0xb7, 0xd0, 0xa8, 0xa7, 0x68, 0x76, 0xa4,
+    0x87, 0x4d, 0xfe, 0x96, 0x44, 0x24, 0x9a, 0xf1
+};
+
+// RGB control characteristic UUID: f19a2445-96fe-4d87-a476-68a7a8d0b7ba
+uint8_t rgb_ctrl_char_uuid[ESP_UUID_LEN_128] = {
+    0xba, 0xb7, 0xd0, 0xa8, 0xa7, 0x68, 0x76, 0xa4,
+    0x87, 0x4d, 0xfe, 0x96, 0x45, 0x24, 0x9a, 0xf1
+};
+
 static uint8_t char1_str[] = {0x11,0x22,0x33};
 static esp_gatt_char_prop_t a_property = 0;
 
@@ -85,25 +97,6 @@ static esp_attr_value_t gatts_demo_char1_val =
 static uint8_t adv_config_done = 0;
 
 esp_timer_handle_t connection_timer;
-
-#ifdef CONFIG_SET_RAW_ADV_DATA
-static uint8_t raw_adv_data[] = {
-        0x02, 0x01, 0x06,
-        0x02, 0x0a, 0xeb, 0x03, 0x03, 0xab, 0xcd
-};
-static uint8_t raw_scan_rsp_data[] = {
-        0x0f, 0x09, 0x45, 0x53, 0x50, 0x5f, 0x47, 0x41, 0x54, 0x54, 0x53, 0x5f, 0x44,
-        0x45, 0x4d, 0x4f
-};
-#else
-
-static uint8_t adv_service_uuid128[32] = {
-    /* LSB <--------------------------------------------------------------------------------> MSB */
-    //first uuid, 16bit, [12],[13] is the value
-    0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xEE, 0x00, 0x00, 0x00,
-    //second uuid, 32bit, [12], [13], [14], [15] is the value
-    0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00,
-};
 
 // The length of adv data must be less than 31 bytes
 //static uint8_t test_manufacturer[TEST_MANUFACTURER_DATA_LEN] =  {0x12, 0x23, 0x45, 0x56};
@@ -119,8 +112,8 @@ static esp_ble_adv_data_t adv_data = {
     .p_manufacturer_data =  NULL, //&test_manufacturer[0],
     .service_data_len = 0,
     .p_service_data = NULL,
-    .service_uuid_len = sizeof(adv_service_uuid128),
-    .p_service_uuid = adv_service_uuid128,
+    .service_uuid_len = 0,
+    .p_service_uuid = NULL,
     .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
 };
 // scan response data
@@ -135,12 +128,10 @@ static esp_ble_adv_data_t scan_rsp_data = {
     .p_manufacturer_data =  NULL, //&test_manufacturer[0],
     .service_data_len = 0,
     .p_service_data = NULL,
-    .service_uuid_len = sizeof(adv_service_uuid128),
-    .p_service_uuid = adv_service_uuid128,
+    .service_uuid_len = 0,
+    .p_service_uuid = NULL,
     .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
 };
-
-#endif /* CONFIG_SET_RAW_ADV_DATA */
 
 static esp_ble_adv_params_t adv_params = {
     .adv_int_min        = 0xC80,
@@ -329,8 +320,8 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         ESP_LOGI(GATTS_TAG, "REGISTER_APP_EVT, status %d, app_id %d\n", param->reg.status, param->reg.app_id);
         gl_profile_tab[PROFILE_A_APP_ID].service_id.is_primary = true;
         gl_profile_tab[PROFILE_A_APP_ID].service_id.id.inst_id = 0x00;
-        gl_profile_tab[PROFILE_A_APP_ID].service_id.id.uuid.len = ESP_UUID_LEN_16;
-        gl_profile_tab[PROFILE_A_APP_ID].service_id.id.uuid.uuid.uuid16 = GATTS_SERVICE_UUID_TEST_A;
+        gl_profile_tab[PROFILE_A_APP_ID].service_id.id.uuid.len = ESP_UUID_LEN_128;
+        memcpy(gl_profile_tab[PROFILE_A_APP_ID].service_id.id.uuid.uuid.uuid128, main_srvc_uuid, sizeof(main_srvc_uuid));
 
         esp_err_t set_dev_name_ret = esp_ble_gap_set_device_name(TEST_DEVICE_NAME);
         if (set_dev_name_ret){
@@ -371,7 +362,7 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         rsp.attr_value.handle = param->read.handle;
         rsp.attr_value.len = 4;
         rsp.attr_value.value[0] = 0xde;
-        rsp.attr_value.value[1] = 0xed;
+        rsp.attr_value.value[1] = 0xad;
         rsp.attr_value.value[2] = 0xbe;
         rsp.attr_value.value[3] = 0xef;
         esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
@@ -443,8 +434,8 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
     case ESP_GATTS_CREATE_EVT:
         ESP_LOGI(GATTS_TAG, "CREATE_SERVICE_EVT, status %d,  service_handle %d\n", param->create.status, param->create.service_handle);
         gl_profile_tab[PROFILE_A_APP_ID].service_handle = param->create.service_handle;
-        gl_profile_tab[PROFILE_A_APP_ID].char_uuid.len = ESP_UUID_LEN_16;
-        gl_profile_tab[PROFILE_A_APP_ID].char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_TEST_A;
+        gl_profile_tab[PROFILE_A_APP_ID].char_uuid.len = ESP_UUID_LEN_128;
+        memcpy(gl_profile_tab[PROFILE_A_APP_ID].char_uuid.uuid.uuid128, rgb_ctrl_char_uuid, sizeof(rgb_ctrl_char_uuid));
 
         esp_ble_gatts_start_service(gl_profile_tab[PROFILE_A_APP_ID].service_handle);
         a_property = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
