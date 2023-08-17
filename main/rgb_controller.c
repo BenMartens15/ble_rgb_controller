@@ -4,7 +4,7 @@
 #include "driver/ledc.h"
 #include "esp_err.h"
 #include "esp_log.h"
-#include "rgb_control.h"
+#include "rgb_controller.h"
 /******************************************************************************/
 
 /* DEFINES ********************************************************************/
