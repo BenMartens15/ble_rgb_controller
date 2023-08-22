@@ -9,6 +9,10 @@
 /******************************************************************************/
 
 /* DEFINES ********************************************************************/
+#define BLE_CMD_SET_LIGHT_STATE             0x01
+#define BLE_CMD_SET_RGB_COLOUR              0x02
+#define BLE_CMD_SET_RGB_BRIGHTNESS          0x03
+#define BLE_CMD_SET_DEVICE_NAME             0x04
 /******************************************************************************/
 
 /* ENUMS **********************************************************************/
@@ -33,6 +37,14 @@ typedef struct {
     bool light_state;
     uint8_t data[5];
 } ble_mfg_adv_data_t;
+
+typedef struct {
+    uint8_t command;
+    uint8_t data_size;
+    union {
+        uint8_t rgb_colour[3];
+    } data;
+} ble_cmd_request_t;
 /******************************************************************************/
 
 /* GLOBALS ********************************************************************/

@@ -197,6 +197,7 @@ static const esp_gatts_attr_db_t gatt_db[NUM_ATTRIBUTES] =
 /******************************************************************************/
 
 /* PROTOTYPES *****************************************************************/
+static void control_char_write(esp_ble_gatts_cb_param_t *param);
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
 /******************************************************************************/
@@ -267,6 +268,58 @@ void ble_init(void)
 /******************************************************************************/ 
 
 /* PRIVATE FUNCTIONS **********************************************************/
+static void control_char_write(esp_ble_gatts_cb_param_t *param)
+{
+    ble_cmd_request_t request = {0x0};
+
+    if (param->write.len < 2) {
+        ESP_LOGE(GATTS_TABLE_TAG, "Not enough data supplied. Must specify at least one byte for the command and one byte for the data size.");
+        return;
+    }
+    request.command = param->write.value[0];
+    request.data_size = param->write.value[1];
+    if (request.data_size != param->write.len - 2) {
+        ESP_LOGE(GATTS_TABLE_TAG, "Specified data size and actual data size do not match. Specified: %d, actual: %d", request.data_size, param->write.len - 2);
+        return;
+    }
+    memcpy(&request.data.rgb_colour, &param->write.value[2], request.data_size);
+    ESP_LOGI(GATTS_TABLE_TAG, "BLE command - command: %d, size: %d", request.command, request.data_size);
+    ESP_LOGI(GATTS_TABLE_TAG, "Data: ");
+    esp_log_buffer_hex(GATTS_TABLE_TAG, request.data.rgb_colour, request.data_size);
+
+    switch (request.command) {
+        case BLE_CMD_SET_LIGHT_STATE:
+            ESP_LOGI(GATTS_TABLE_TAG, "Command: BLE_CMD_SET_LIGHT_STATE (%d)", BLE_CMD_SET_LIGHT_STATE);
+            break;
+        case BLE_CMD_SET_RGB_COLOUR:
+            ESP_LOGI(GATTS_TABLE_TAG, "Command: BLE_CMD_SET_RGB_COLOUR (%d)", BLE_CMD_SET_RGB_COLOUR);
+
+            rgb_control_set_colour(param->write.value);
+            
+            if (request.data_size == 3) {
+                if (request.data.rgb_colour[0] != 0 || request.data.rgb_colour[1] != 0 || request.data.rgb_colour[2] != 0) {
+                    mfg_adv_data.light_state = true;
+                    esp_ble_gap_config_adv_data(&adv_data);
+                } else {
+                    mfg_adv_data.light_state = false;
+                    esp_ble_gap_config_adv_data(&adv_data);
+                }
+            } else {
+                ESP_LOGE(GATTS_TABLE_TAG, "Invalid data size: %d", request.data_size);
+            }
+            break;
+        case BLE_CMD_SET_RGB_BRIGHTNESS:
+            ESP_LOGI(GATTS_TABLE_TAG, "Command: BLE_CMD_SET_RGB_BRIGHTNESS (%d)", BLE_CMD_SET_RGB_BRIGHTNESS);
+            break;
+        case BLE_CMD_SET_DEVICE_NAME:
+            ESP_LOGI(GATTS_TABLE_TAG, "Command: BLE_CMD_SET_DEVICE_NAME (%d)", BLE_CMD_SET_DEVICE_NAME);
+
+            esp_ble_gatts_set_attr_value(attribute_handle_table[LIGHTNING_INFO_CHAR_VALUE], request.data_size, request.data.rgb_colour);
+
+            break;
+    }
+}
+
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
     switch (event) {
@@ -343,17 +396,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             if (param->write.handle == attribute_handle_table[LIGHTNING_CONTROL_CHAR_VALUE]) {
                 ESP_LOGI(GATTS_TABLE_TAG, "Write to control characteristic");
 
-                if (param->write.len == 3) {
-                    rgb_control_set_colour(param->write.value);
-                    
-                    if (param->write.value[0] != 0 || param->write.value[1] != 0 || param->write.value[2] != 0) {
-                        mfg_adv_data.light_state = true;
-                        esp_ble_gap_config_adv_data(&adv_data);
-                    } else {
-                        mfg_adv_data.light_state = false;
-                        esp_ble_gap_config_adv_data(&adv_data);
-                    }
-                }
+                control_char_write(param);
             }
 
             // handle enabling and disabling of notification/indications
