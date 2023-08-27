@@ -66,6 +66,7 @@ static uint8_t info_char_uuid[ESP_UUID_LEN_128] = {
 ble_mfg_adv_data_t mfg_adv_data = {
     .company_id = 0xffff,
     .light_state = false,
+    .device_type = DEVICE_TYPE_RGB_CONTROLLER,
 };
 
 /* The length of adv data must be less than 31 bytes */
@@ -99,7 +100,7 @@ static const uint8_t char_prop_read                =  ESP_GATT_CHAR_PROP_BIT_REA
 // static const uint8_t char_prop_write               = ESP_GATT_CHAR_PROP_BIT_WRITE;
 static const uint8_t char_prop_read_write_notify   = ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
 static const uint8_t cccd_init_value[2]            = {0x00, 0x00};
-static const uint8_t char_init_value[4]            = {0x00, 0x00, 0x00, 0x00}; 
+static const uint8_t char_init_value[7]            = {'U', 'n', 'n', 'a', 'm', 'e', 'd'}; 
 
 /* Full Database Description - Used to add attributes into the database */
 static const esp_gatts_attr_db_t gatt_db[NUM_ATTRIBUTES] =
