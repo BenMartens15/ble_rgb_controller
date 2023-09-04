@@ -1,62 +1,30 @@
-#ifndef FILE_H
-#define FILE_H
+
+#ifndef SWITCH_CONTROLLER_H
+#define SWITCH_CONTROLLER_H
 
 /* INCLUDES *******************************************************************/
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
+#include <stdint.h>
 /******************************************************************************/
 
 /* DEFINES ********************************************************************/
-#define DEVICE_TYPE_RGB_CONTROLLER          0
-#define DEVICE_TYPE_LIGHT_SWITCH            1
-
-#define BLE_CMD_SET_LIGHT_STATE             0x01
-#define BLE_CMD_SET_RGB_COLOUR              0x02
-#define BLE_CMD_SET_RGB_BRIGHTNESS          0x03
-#define BLE_CMD_SET_DEVICE_NAME             0x04
 /******************************************************************************/
 
 /* ENUMS **********************************************************************/
-enum
-{
-    LIGHTNING_SRVC,
-
-    LIGHTNING_CONTROL_CHAR,
-    LIGHTNING_CONTROL_CHAR_VALUE,
-    LIGHTNING_CONTROL_CHAR_CCCD,
-
-    LIGHTNING_INFO_CHAR,
-    LIGHTNING_INFO_CHAR_VALUE,
-
-    NUM_ATTRIBUTES,
-};
+typedef enum {
+    OFF,
+    ON
+} switch_state;
 /******************************************************************************/
 
 /* STRUCTURES *****************************************************************/
-typedef struct {
-    uint16_t company_id;
-    bool light_state;
-    uint8_t device_type;
-    uint8_t data[4];
-} ble_mfg_adv_data_t;
-
-typedef struct {
-    uint8_t command;
-    uint8_t data_size;
-    union {
-        uint8_t rgb_colour[3];
-        uint8_t switch_state;
-    } data;
-} ble_cmd_request_t;
 /******************************************************************************/
 
 /* GLOBALS ********************************************************************/
 /******************************************************************************/
 
 /* PROTOTYPES *****************************************************************/
-void ble_init();
+void switch_control_init(void);
+void switch_control_set_state(switch_state state);
 /******************************************************************************/
 
-#endif /* #ifndef FILE_H */
+#endif /* #ifndef SWITCH_CONTROLLER_H */

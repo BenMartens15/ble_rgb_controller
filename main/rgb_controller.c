@@ -8,7 +8,7 @@
 /******************************************************************************/
 
 /* DEFINES ********************************************************************/
-#define PWM_TAG                 "PWM"
+#define RGB_CONTROLLER_TAG      "RGB_CONTROLLER"
 
 #define RED_CTRL_PIN            14
 #define GREEN_CTRL_PIN          12
@@ -36,7 +36,7 @@
 /* PUBLIC FUNCTIONS ***********************************************************/
 void rgb_control_pwm_init()
 {
-    ESP_LOGI(PWM_TAG, "Create timer");
+    ESP_LOGI(RGB_CONTROLLER_TAG, "Create timer");
     // Prepare and then apply the LEDC PWM timer configuration
     ledc_timer_config_t ledc_timer = {
         .speed_mode       = LEDC_MODE,
@@ -47,7 +47,7 @@ void rgb_control_pwm_init()
     };
     ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
 
-    ESP_LOGI(PWM_TAG, "Configure channels");
+    ESP_LOGI(RGB_CONTROLLER_TAG, "Configure channels");
     // Prepare and then apply the LEDC PWM channel configuration
     ledc_channel_config_t red_pwm = {
         .speed_mode     = LEDC_MODE,
@@ -85,6 +85,10 @@ void rgb_control_pwm_init()
 
 void rgb_control_set_colour(uint8_t * value)
 {
+    ESP_LOGI(RGB_CONTROLLER_TAG, "value[0]: %d", value[0]);
+    ESP_LOGI(RGB_CONTROLLER_TAG, "value[1]: %d", value[1]);
+    ESP_LOGI(RGB_CONTROLLER_TAG, "value[2]: %d", value[2]);
+
     ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_0, value[0]);
     ledc_update_duty(LEDC_MODE, LEDC_CHANNEL_0);
 

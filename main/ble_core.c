@@ -14,6 +14,7 @@
 #include "led.h"
 #include "nvs_flash.h"
 #include "rgb_controller.h"
+#include "switch_controller.h"
 /******************************************************************************/
 
 /* DEFINES ********************************************************************/
@@ -291,13 +292,23 @@ static void control_char_write(esp_ble_gatts_cb_param_t *param)
     switch (request.command) {
         case BLE_CMD_SET_LIGHT_STATE:
             ESP_LOGI(GATTS_TABLE_TAG, "Command: BLE_CMD_SET_LIGHT_STATE (%d)", BLE_CMD_SET_LIGHT_STATE);
+
+            if (request.data_size == 1) {
+                if (request.data.switch_state > 1) {
+                    ESP_LOGE(GATTS_TABLE_TAG, "Invalid switch state: %d - must be either 1 or 0", request.data.switch_state);
+                } else {
+                    switch_control_set_state(request.data.switch_state);
+                }
+            } else {
+                ESP_LOGE(GATTS_TABLE_TAG, "Invalid data size: %d", request.data_size);
+            }
             break;
         case BLE_CMD_SET_RGB_COLOUR:
             ESP_LOGI(GATTS_TABLE_TAG, "Command: BLE_CMD_SET_RGB_COLOUR (%d)", BLE_CMD_SET_RGB_COLOUR);
-
-            rgb_control_set_colour(param->write.value);
             
             if (request.data_size == 3) {
+                rgb_control_set_colour(request.data.rgb_colour);
+
                 if (request.data.rgb_colour[0] != 0 || request.data.rgb_colour[1] != 0 || request.data.rgb_colour[2] != 0) {
                     mfg_adv_data.light_state = true;
                     esp_ble_gap_config_adv_data(&adv_data);
