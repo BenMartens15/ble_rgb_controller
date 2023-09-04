@@ -67,7 +67,6 @@ static uint8_t info_char_uuid[ESP_UUID_LEN_128] = {
 ble_mfg_adv_data_t mfg_adv_data = {
     .company_id = 0xffff,
     .light_state = false,
-    .device_type = DEVICE_TYPE_RGB_CONTROLLER,
 };
 
 /* The length of adv data must be less than 31 bytes */
@@ -216,6 +215,8 @@ void ble_init(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK( ret );
+
+    mfg_adv_data.device_type = CONFIG_DEVICE_TYPE;
 
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 

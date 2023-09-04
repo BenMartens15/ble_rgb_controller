@@ -9,9 +9,6 @@
 /******************************************************************************/
 
 /* DEFINES ********************************************************************/
-#define DEVICE_TYPE_RGB_CONTROLLER          0
-#define DEVICE_TYPE_LIGHT_SWITCH            1
-
 #define BLE_CMD_SET_LIGHT_STATE             0x01
 #define BLE_CMD_SET_RGB_COLOUR              0x02
 #define BLE_CMD_SET_RGB_BRIGHTNESS          0x03
@@ -19,6 +16,12 @@
 /******************************************************************************/
 
 /* ENUMS **********************************************************************/
+enum
+{
+    RGB_CONTROLLER,
+    LIGHT_SWITCH
+};
+
 enum
 {
     LIGHTNING_SRVC,
