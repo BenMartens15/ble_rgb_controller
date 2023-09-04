@@ -299,6 +299,8 @@ static void control_char_write(esp_ble_gatts_cb_param_t *param)
                     ESP_LOGE(GATTS_TABLE_TAG, "Invalid switch state: %d - must be either 1 or 0", request.data.switch_state);
                 } else {
                     switch_control_set_state(request.data.switch_state);
+                    mfg_adv_data.light_state = request.data.switch_state;
+                    esp_ble_gap_config_adv_data(&adv_data);
                 }
             } else {
                 ESP_LOGE(GATTS_TABLE_TAG, "Invalid data size: %d", request.data_size);
