@@ -10,6 +10,7 @@ void app_main(void)
     led_init();
     rgb_control_pwm_init();
     switch_control_init();
+    switch_control_intr_init();
     
     return;
 }

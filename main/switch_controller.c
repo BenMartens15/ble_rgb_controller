@@ -1,9 +1,12 @@
 
 /* INCLUDES *******************************************************************/
+#include "ble_core.h"
+#include "driver/gpio.h"
 #include "driver/mcpwm_prelude.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 #include "switch_controller.h"
 /******************************************************************************/
 
@@ -21,6 +24,9 @@
 
 #define NEUTRAL_POS                     90
 #define PUSH_SWITCH_POS                 40
+
+#define PIR_INT_PIN                     14
+#define PIR_INT_PIN_MASK                (1 << PIR_INT_PIN)
 /******************************************************************************/
 
 /* ENUMS **********************************************************************/
@@ -31,14 +37,20 @@
 
 /* GLOBALS ********************************************************************/
 mcpwm_cmpr_handle_t m_comparator = NULL;
+switch_state_e m_switch_state = OFF;
+
+static QueueHandle_t gpio_evt_queue = NULL;
 /******************************************************************************/
 
 /* PROTOTYPES *****************************************************************/
 static inline uint32_t example_angle_to_compare(uint8_t angle);
+static void pir_sensor_task(void* arg);
+static void pir_sensor_interrupt_handler(void * arg);
 /******************************************************************************/
 
 /* PUBLIC FUNCTIONS ***********************************************************/
-void switch_control_init(void) {
+void switch_control_init(void)
+{
     ESP_LOGI(SWITCH_CONTROLLER_TAG, "Create timer and operator");
     mcpwm_timer_handle_t timer = NULL;
     mcpwm_timer_config_t timer_config = {
@@ -87,9 +99,30 @@ void switch_control_init(void) {
     ESP_ERROR_CHECK(mcpwm_timer_start_stop(timer, MCPWM_TIMER_START_NO_STOP));
 }
 
-void switch_control_set_state(switch_state state) {
+void switch_control_intr_init(void)
+{
+    gpio_config_t pin_cfg = {
+        .intr_type = GPIO_INTR_POSEDGE,
+        .mode = GPIO_MODE_INPUT,
+        .pin_bit_mask = PIR_INT_PIN_MASK,
+        .pull_up_en = 0
+    };
+
+    //create a queue to handle gpio event from isr
+    gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
+    //start gpio task
+    xTaskCreate(pir_sensor_task, "pir_sensor_task", 2048, NULL, 10, NULL);
+
+    gpio_config(&pin_cfg);
+    gpio_install_isr_service(0);
+    gpio_isr_handler_add(PIR_INT_PIN, pir_sensor_interrupt_handler, NULL);
+}
+
+void switch_control_set_state(switch_state_e state)
+{
     uint8_t servo_angle = 0;
 
+    m_switch_state = state;
     ESP_LOGI(SWITCH_CONTROLLER_TAG, "Setting switch position: %d", state);
     if (state == ON) {
         servo_angle = NEUTRAL_POS + PUSH_SWITCH_POS;
@@ -99,6 +132,13 @@ void switch_control_set_state(switch_state state) {
     ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(m_comparator, example_angle_to_compare(servo_angle)));
     vTaskDelay(pdMS_TO_TICKS(2000));
     ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(m_comparator, example_angle_to_compare(NEUTRAL_POS)));
+
+    ble_update_adv_data();
+}
+
+switch_state_e switch_control_get_state(void)
+{
+    return m_switch_state;
 }
 /******************************************************************************/ 
 
@@ -106,5 +146,25 @@ void switch_control_set_state(switch_state state) {
 static inline uint32_t example_angle_to_compare(uint8_t angle)
 {
     return (angle - SERVO_MIN_DEGREE) * (SERVO_MAX_PULSEWIDTH_US - SERVO_MIN_PULSEWIDTH_US) / (SERVO_MAX_DEGREE - SERVO_MIN_DEGREE) + SERVO_MIN_PULSEWIDTH_US;
+}
+
+static void pir_sensor_task(void* arg)
+{
+    uint32_t io_num;
+    for(;;) {
+        if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
+            ESP_LOGD(SWITCH_CONTROLLER_TAG, "GPIO[%"PRIu32"] intr, val: %d", io_num, gpio_get_level(io_num));
+            if (m_switch_state == OFF) {
+                ESP_LOGI(SWITCH_CONTROLLER_TAG, "Movement detected - turning switch on");
+                switch_control_set_state(ON);
+            }
+        }
+    }
+}
+
+static void IRAM_ATTR pir_sensor_interrupt_handler(void * arg)
+{
+    uint32_t gpio_num = (uint32_t) arg;
+    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
 }
 /******************************************************************************/
