@@ -4,6 +4,7 @@
 #include "driver/gpio.h"
 #include "driver/mcpwm_prelude.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -27,6 +28,8 @@
 
 #define PIR_INT_PIN                     14
 #define PIR_INT_PIN_MASK                (1 << PIR_INT_PIN)
+
+#define SECONDS_TO_MICROSECONDS(s)      (s * 1000000)
 /******************************************************************************/
 
 /* ENUMS **********************************************************************/
@@ -38,11 +41,14 @@
 /* GLOBALS ********************************************************************/
 mcpwm_cmpr_handle_t m_comparator = NULL;
 switch_state_e m_switch_state = OFF;
+esp_timer_handle_t m_motion_timer;
+uint16_t m_motion_timeout_period = 120;
 
 static QueueHandle_t gpio_evt_queue = NULL;
 /******************************************************************************/
 
 /* PROTOTYPES *****************************************************************/
+static void motion_timeout(void * unused);
 static inline uint32_t example_angle_to_compare(uint8_t angle);
 static void pir_sensor_task(void* arg);
 static void pir_sensor_interrupt_handler(void * arg);
@@ -97,6 +103,13 @@ void switch_control_init(void)
     ESP_LOGI(SWITCH_CONTROLLER_TAG, "Enable and start timer");
     ESP_ERROR_CHECK(mcpwm_timer_enable(timer));
     ESP_ERROR_CHECK(mcpwm_timer_start_stop(timer, MCPWM_TIMER_START_NO_STOP));
+
+    // initialize motion timer     
+    const esp_timer_create_args_t motion_timer_args = {
+        .callback = &motion_timeout,
+        .name = "motion_timer"
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&motion_timer_args, &m_motion_timer));
 }
 
 void switch_control_intr_init(void)
@@ -126,8 +139,12 @@ void switch_control_set_state(switch_state_e state)
     ESP_LOGI(SWITCH_CONTROLLER_TAG, "Setting switch position: %d", state);
     if (state == ON) {
         servo_angle = NEUTRAL_POS + PUSH_SWITCH_POS;
+        // start the motion timer
+        ESP_ERROR_CHECK(esp_timer_start_periodic(m_motion_timer, SECONDS_TO_MICROSECONDS(m_motion_timeout_period)));
     } else {
         servo_angle = NEUTRAL_POS - PUSH_SWITCH_POS;
+        // stop the motion timer
+        ESP_ERROR_CHECK(esp_timer_stop(m_motion_timer));
     }
     ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(m_comparator, example_angle_to_compare(servo_angle)));
     vTaskDelay(pdMS_TO_TICKS(2000));
@@ -140,9 +157,23 @@ switch_state_e switch_control_get_state(void)
 {
     return m_switch_state;
 }
+
+void switch_control_set_motion_timeout(uint16_t timeout)
+{
+    ESP_LOGI(SWITCH_CONTROLLER_TAG, "Setting motion timeout to %d seconds", timeout);
+    m_motion_timeout_period = timeout;
+}
 /******************************************************************************/ 
 
 /* PRIVATE FUNCTIONS **********************************************************/
+static void motion_timeout(void * unused)
+{
+    if (m_switch_state == ON) {
+        ESP_LOGI(SWITCH_CONTROLLER_TAG, "No motion detected in the last %d seconds. Turning switch off.", m_motion_timeout_period);
+        switch_control_set_state(OFF);
+    }
+}
+
 static inline uint32_t example_angle_to_compare(uint8_t angle)
 {
     return (angle - SERVO_MIN_DEGREE) * (SERVO_MAX_PULSEWIDTH_US - SERVO_MIN_PULSEWIDTH_US) / (SERVO_MAX_DEGREE - SERVO_MIN_DEGREE) + SERVO_MIN_PULSEWIDTH_US;
@@ -154,8 +185,15 @@ static void pir_sensor_task(void* arg)
     for(;;) {
         if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
             ESP_LOGD(SWITCH_CONTROLLER_TAG, "GPIO[%"PRIu32"] intr, val: %d", io_num, gpio_get_level(io_num));
+
+            // reset the motion timer every time movement is detected
+            if (esp_timer_is_active(m_motion_timer) == true) {
+                ESP_ERROR_CHECK(esp_timer_restart(m_motion_timer, SECONDS_TO_MICROSECONDS(m_motion_timeout_period)));
+                ESP_LOGD(SWITCH_CONTROLLER_TAG, "Motion detected - timer reset");
+            }
+
             if (m_switch_state == OFF) {
-                ESP_LOGI(SWITCH_CONTROLLER_TAG, "Movement detected - turning switch on");
+                ESP_LOGI(SWITCH_CONTROLLER_TAG, "Motion detected - turning switch on");
                 switch_control_set_state(ON);
             }
         }

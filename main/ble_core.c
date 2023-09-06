@@ -335,8 +335,15 @@ static void control_char_write(esp_ble_gatts_cb_param_t *param)
             ESP_LOGI(GATTS_TABLE_TAG, "Command: BLE_CMD_SET_DEVICE_NAME (%d)", BLE_CMD_SET_DEVICE_NAME);
 
             esp_ble_gatts_set_attr_value(attribute_handle_table[LIGHTNING_INFO_CHAR_VALUE], request.data_size, request.data.rgb_colour);
-
             break;
+        case BLE_CMD_SET_MOTION_TIMEOUT:
+            ESP_LOGI(GATTS_TABLE_TAG, "Command: BLE_CMD_SET_MOTION_TIMEOUT (%d)", BLE_CMD_SET_MOTION_TIMEOUT);
+
+            if (request.data_size == 2) {
+                switch_control_set_motion_timeout(__htons(request.data.motion_timeout));
+            } else {
+                ESP_LOGE(GATTS_TABLE_TAG, "Invalid data size: %d", request.data_size);
+            }
     }
 }
 
