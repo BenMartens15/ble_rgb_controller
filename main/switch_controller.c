@@ -41,7 +41,8 @@
 
 /* GLOBALS ********************************************************************/
 mcpwm_cmpr_handle_t m_comparator = NULL;
-switch_state_e m_switch_state = OFF;
+on_off_state_e m_switch_state = OFF;
+on_off_state_e m_pir_state = OFF;
 esp_timer_handle_t m_motion_timer;
 uint16_t m_motion_timeout_period = 120;
 
@@ -115,7 +116,7 @@ void switch_control_init(void)
     ESP_ERROR_CHECK(esp_timer_create(&motion_timer_args, &m_motion_timer));
 }
 
-void switch_control_intr_init(void)
+void switch_control_pir_init(void)
 {
     gpio_config_t pin_cfg = {
         .intr_type = GPIO_INTR_POSEDGE,
@@ -131,10 +132,12 @@ void switch_control_intr_init(void)
 
     gpio_config(&pin_cfg);
     gpio_install_isr_service(0);
-    gpio_isr_handler_add(PIR_INT_PIN, pir_sensor_interrupt_handler, NULL);
+    gpio_isr_handler_add(PIR_INT_PIN, pir_sensor_interrupt_handler, (void *)PIR_INT_PIN);
+
+    m_pir_state = ON;
 }
 
-void switch_control_set_state(switch_state_e state)
+void switch_control_set_switch_state(on_off_state_e state)
 {
     uint8_t servo_angle = 0;
 
@@ -143,11 +146,15 @@ void switch_control_set_state(switch_state_e state)
     if (state == ON) {
         servo_angle = NEUTRAL_POS + PUSH_SWITCH_POS;
         // start the motion timer
-        ESP_ERROR_CHECK(esp_timer_start_periodic(m_motion_timer, SECONDS_TO_MICROSECONDS(m_motion_timeout_period)));
+        if (m_pir_state == ON) {
+            ESP_ERROR_CHECK(esp_timer_start_periodic(m_motion_timer, SECONDS_TO_MICROSECONDS(m_motion_timeout_period)));
+        }
     } else {
         servo_angle = NEUTRAL_POS - PUSH_SWITCH_POS;
         // stop the motion timer
-        ESP_ERROR_CHECK(esp_timer_stop(m_motion_timer));
+        if (m_pir_state == ON) {
+            ESP_ERROR_CHECK(esp_timer_stop(m_motion_timer));
+        }
     }
     ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(m_comparator, example_angle_to_compare(servo_angle)));
     vTaskDelay(pdMS_TO_TICKS(2000));
@@ -156,7 +163,22 @@ void switch_control_set_state(switch_state_e state)
     ble_update_adv_data();
 }
 
-switch_state_e switch_control_get_state(void)
+void switch_control_set_pir_state(on_off_state_e state)
+{
+    m_pir_state = state;
+    if (state == ON) {
+        ESP_LOGI(SWITCH_CONTROLLER_TAG, "Enabling PIR sensor");
+        gpio_intr_enable(PIR_INT_PIN);
+    } else {
+        ESP_LOGI(SWITCH_CONTROLLER_TAG, "Disabling PIR sensor");
+        gpio_intr_disable(PIR_INT_PIN);
+        if (esp_timer_is_active(m_motion_timer) == true) {
+            ESP_ERROR_CHECK(esp_timer_stop(m_motion_timer));
+        }
+    }
+}
+
+on_off_state_e switch_control_get_state(void)
 {
     return m_switch_state;
 }
@@ -173,7 +195,7 @@ static void motion_timeout(void * unused)
 {
     if (m_switch_state == ON) {
         ESP_LOGI(SWITCH_CONTROLLER_TAG, "No motion detected in the last %d seconds. Turning switch off.", m_motion_timeout_period);
-        switch_control_set_state(OFF);
+        switch_control_set_switch_state(OFF);
     }
 }
 
@@ -195,7 +217,7 @@ static void pir_sensor_task(void* arg)
 
             if (m_switch_state == OFF) {
                 ESP_LOGI(SWITCH_CONTROLLER_TAG, "Motion detected - turning switch on");
-                switch_control_set_state(ON);
+                switch_control_set_switch_state(ON);
             }
         }
     }

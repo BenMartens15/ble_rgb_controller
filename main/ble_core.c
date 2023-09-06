@@ -305,10 +305,10 @@ static void control_char_write(esp_ble_gatts_cb_param_t *param)
             ESP_LOGI(BLE_TAG, "Command: BLE_CMD_SET_LIGHT_STATE (%d)", BLE_CMD_SET_LIGHT_STATE);
 
             if (request.data_size == 1) {
-                if (request.data.switch_state > 1) {
-                    ESP_LOGE(BLE_TAG, "Invalid switch state: %d - must be either 1 or 0", request.data.switch_state);
+                if (request.data.on_off_state > 1) {
+                    ESP_LOGE(BLE_TAG, "Invalid switch state: %d - must be either 1 or 0", request.data.on_off_state);
                 } else {
-                    switch_control_set_state(request.data.switch_state);
+                    switch_control_set_switch_state(request.data.on_off_state);
                 }
             } else {
                 ESP_LOGE(BLE_TAG, "Invalid data size: %d", request.data_size);
@@ -351,6 +351,20 @@ static void control_char_write(esp_ble_gatts_cb_param_t *param)
             } else {
                 ESP_LOGE(BLE_TAG, "Invalid data size: %d", request.data_size);
             }
+            break;
+        case BLE_CMD_SET_PIR_STATE:
+            ESP_LOGI(BLE_TAG, "Command: BLE_CMD_SET_PIR_STATE (%d)", BLE_CMD_SET_PIR_STATE);
+
+            if (request.data_size == 1) {
+                if (request.data.on_off_state > 1) {
+                    ESP_LOGE(BLE_TAG, "Invalid PIR state: %d - must be either 1 or 0", request.data.on_off_state);
+                } else {
+                    switch_control_set_pir_state(request.data.on_off_state);
+                }
+            } else {
+                ESP_LOGE(BLE_TAG, "Invalid data size: %d", request.data_size);
+            }
+            break;
     }
 }
 

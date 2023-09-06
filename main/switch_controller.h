@@ -13,7 +13,7 @@
 typedef enum {
     OFF,
     ON
-} switch_state_e;
+} on_off_state_e;
 /******************************************************************************/
 
 /* STRUCTURES *****************************************************************/
@@ -24,9 +24,10 @@ typedef enum {
 
 /* PROTOTYPES *****************************************************************/
 void switch_control_init(void);
-void switch_control_intr_init(void);
-void switch_control_set_state(switch_state_e state);
-switch_state_e switch_control_get_state(void);
+void switch_control_pir_init(void);
+void switch_control_set_switch_state(on_off_state_e state);
+void switch_control_set_pir_state(on_off_state_e state);
+on_off_state_e switch_control_get_state(void);
 void switch_control_set_motion_timeout(uint16_t timeout);
 /******************************************************************************/
 

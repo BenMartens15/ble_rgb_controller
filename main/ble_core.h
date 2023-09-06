@@ -14,6 +14,7 @@
 #define BLE_CMD_SET_RGB_BRIGHTNESS          0x03
 #define BLE_CMD_SET_DEVICE_NAME             0x04
 #define BLE_CMD_SET_MOTION_TIMEOUT          0x05
+#define BLE_CMD_SET_PIR_STATE               0x06
 /******************************************************************************/
 
 /* ENUMS **********************************************************************/
@@ -52,7 +53,7 @@ typedef struct {
     union {
         uint8_t device_name[100];
         uint8_t rgb_colour[3];
-        uint8_t switch_state;
+        uint8_t on_off_state;
         uint16_t motion_timeout;
     } data;
 } ble_cmd_request_t;
