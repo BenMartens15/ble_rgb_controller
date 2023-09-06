@@ -10,9 +10,10 @@
 /******************************************************************************/
 
 /* DEFINES ********************************************************************/
-#define LED_TAG "LED"
+#define LED_TAG             "LED"
+#define LED_LOG_LEVEL       ESP_LOG_INFO  
 
-#define LED_PIN 2
+#define LED_PIN             2
 /******************************************************************************/
 
 /* ENUMS **********************************************************************/
@@ -30,6 +31,8 @@
 /* PUBLIC FUNCTIONS ***********************************************************/
 void led_init(void)
 {
+    esp_log_level_set(LED_TAG, LED_LOG_LEVEL);
+
     ESP_LOGI(LED_TAG, "Initializing LED");
     gpio_reset_pin(LED_PIN);
     gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);

@@ -50,6 +50,7 @@ typedef struct {
     uint8_t command;
     uint8_t data_size;
     union {
+        uint8_t device_name[100];
         uint8_t rgb_colour[3];
         uint8_t switch_state;
         uint16_t motion_timeout;

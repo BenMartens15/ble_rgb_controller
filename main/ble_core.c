@@ -18,7 +18,8 @@
 /******************************************************************************/
 
 /* DEFINES ********************************************************************/
-#define GATTS_TABLE_TAG "BLE_CORE"
+#define BLE_TAG                     "BLE_CORE"
+#define BLE_LOG_LEVEL               ESP_LOG_INFO
 
 #define ESP_APP_ID                  0x55
 #define SAMPLE_DEVICE_NAME          "Lightning-LC2444"
@@ -208,6 +209,8 @@ void ble_init(void)
 {
     esp_err_t ret;
 
+    esp_log_level_set(BLE_TAG, BLE_LOG_LEVEL);
+
     /* Initialize NVS. */
     ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -223,49 +226,49 @@ void ble_init(void)
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ret = esp_bt_controller_init(&bt_cfg);
     if (ret) {
-        ESP_LOGE(GATTS_TABLE_TAG, "%s enable controller failed: %s", __func__, esp_err_to_name(ret));
+        ESP_LOGE(BLE_TAG, "%s enable controller failed: %s", __func__, esp_err_to_name(ret));
         return;
     }
 
     ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
     if (ret) {
-        ESP_LOGE(GATTS_TABLE_TAG, "%s enable controller failed: %s", __func__, esp_err_to_name(ret));
+        ESP_LOGE(BLE_TAG, "%s enable controller failed: %s", __func__, esp_err_to_name(ret));
         return;
     }
 
     ret = esp_bluedroid_init();
     if (ret) {
-        ESP_LOGE(GATTS_TABLE_TAG, "%s init bluetooth failed: %s", __func__, esp_err_to_name(ret));
+        ESP_LOGE(BLE_TAG, "%s init bluetooth failed: %s", __func__, esp_err_to_name(ret));
         return;
     }
 
     ret = esp_bluedroid_enable();
     if (ret) {
-        ESP_LOGE(GATTS_TABLE_TAG, "%s enable bluetooth failed: %s", __func__, esp_err_to_name(ret));
+        ESP_LOGE(BLE_TAG, "%s enable bluetooth failed: %s", __func__, esp_err_to_name(ret));
         return;
     }
 
     ret = esp_ble_gatts_register_callback(gatts_event_handler);
     if (ret){
-        ESP_LOGE(GATTS_TABLE_TAG, "gatts register error, error code = %x", ret);
+        ESP_LOGE(BLE_TAG, "gatts register error, error code = %x", ret);
         return;
     }
 
     ret = esp_ble_gap_register_callback(gap_event_handler);
     if (ret){
-        ESP_LOGE(GATTS_TABLE_TAG, "gap register error, error code = %x", ret);
+        ESP_LOGE(BLE_TAG, "gap register error, error code = %x", ret);
         return;
     }
 
     ret = esp_ble_gatts_app_register(ESP_APP_ID);
     if (ret){
-        ESP_LOGE(GATTS_TABLE_TAG, "gatts app register error, error code = %x", ret);
+        ESP_LOGE(BLE_TAG, "gatts app register error, error code = %x", ret);
         return;
     }
 
     esp_err_t local_mtu_ret = esp_ble_gatt_set_local_mtu(500);
     if (local_mtu_ret){
-        ESP_LOGE(GATTS_TABLE_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
+        ESP_LOGE(BLE_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
     }
 }
 
@@ -283,36 +286,36 @@ static void control_char_write(esp_ble_gatts_cb_param_t *param)
     ble_cmd_request_t request = {0x0};
 
     if (param->write.len < 2) {
-        ESP_LOGE(GATTS_TABLE_TAG, "Not enough data supplied. Must specify at least one byte for the command and one byte for the data size.");
+        ESP_LOGE(BLE_TAG, "Not enough data supplied. Must specify at least one byte for the command and one byte for the data size.");
         return;
     }
     request.command = param->write.value[0];
     request.data_size = param->write.value[1];
     if (request.data_size != param->write.len - 2) {
-        ESP_LOGE(GATTS_TABLE_TAG, "Specified data size and actual data size do not match. Specified: %d, actual: %d", request.data_size, param->write.len - 2);
+        ESP_LOGE(BLE_TAG, "Specified data size and actual data size do not match. Specified: %d, actual: %d", request.data_size, param->write.len - 2);
         return;
     }
     memcpy(&request.data.rgb_colour, &param->write.value[2], request.data_size);
-    ESP_LOGI(GATTS_TABLE_TAG, "BLE command - command: %d, size: %d", request.command, request.data_size);
-    ESP_LOGI(GATTS_TABLE_TAG, "Data: ");
-    esp_log_buffer_hex(GATTS_TABLE_TAG, request.data.rgb_colour, request.data_size);
+    ESP_LOGI(BLE_TAG, "BLE command - command: %d, size: %d", request.command, request.data_size);
+    ESP_LOGI(BLE_TAG, "Data: ");
+    esp_log_buffer_hex(BLE_TAG, request.data.rgb_colour, request.data_size);
 
     switch (request.command) {
         case BLE_CMD_SET_LIGHT_STATE:
-            ESP_LOGI(GATTS_TABLE_TAG, "Command: BLE_CMD_SET_LIGHT_STATE (%d)", BLE_CMD_SET_LIGHT_STATE);
+            ESP_LOGI(BLE_TAG, "Command: BLE_CMD_SET_LIGHT_STATE (%d)", BLE_CMD_SET_LIGHT_STATE);
 
             if (request.data_size == 1) {
                 if (request.data.switch_state > 1) {
-                    ESP_LOGE(GATTS_TABLE_TAG, "Invalid switch state: %d - must be either 1 or 0", request.data.switch_state);
+                    ESP_LOGE(BLE_TAG, "Invalid switch state: %d - must be either 1 or 0", request.data.switch_state);
                 } else {
                     switch_control_set_state(request.data.switch_state);
                 }
             } else {
-                ESP_LOGE(GATTS_TABLE_TAG, "Invalid data size: %d", request.data_size);
+                ESP_LOGE(BLE_TAG, "Invalid data size: %d", request.data_size);
             }
             break;
         case BLE_CMD_SET_RGB_COLOUR:
-            ESP_LOGI(GATTS_TABLE_TAG, "Command: BLE_CMD_SET_RGB_COLOUR (%d)", BLE_CMD_SET_RGB_COLOUR);
+            ESP_LOGI(BLE_TAG, "Command: BLE_CMD_SET_RGB_COLOUR (%d)", BLE_CMD_SET_RGB_COLOUR);
             
             if (request.data_size == 3) {
                 rgb_control_set_colour(request.data.rgb_colour);
@@ -325,24 +328,28 @@ static void control_char_write(esp_ble_gatts_cb_param_t *param)
                     esp_ble_gap_config_adv_data(&adv_data);
                 }
             } else {
-                ESP_LOGE(GATTS_TABLE_TAG, "Invalid data size: %d", request.data_size);
+                ESP_LOGE(BLE_TAG, "Invalid data size: %d", request.data_size);
             }
             break;
         case BLE_CMD_SET_RGB_BRIGHTNESS:
-            ESP_LOGI(GATTS_TABLE_TAG, "Command: BLE_CMD_SET_RGB_BRIGHTNESS (%d)", BLE_CMD_SET_RGB_BRIGHTNESS);
+            ESP_LOGI(BLE_TAG, "Command: BLE_CMD_SET_RGB_BRIGHTNESS (%d)", BLE_CMD_SET_RGB_BRIGHTNESS);
             break;
         case BLE_CMD_SET_DEVICE_NAME:
-            ESP_LOGI(GATTS_TABLE_TAG, "Command: BLE_CMD_SET_DEVICE_NAME (%d)", BLE_CMD_SET_DEVICE_NAME);
+            ESP_LOGI(BLE_TAG, "Command: BLE_CMD_SET_DEVICE_NAME (%d)", BLE_CMD_SET_DEVICE_NAME);
 
-            esp_ble_gatts_set_attr_value(attribute_handle_table[LIGHTNING_INFO_CHAR_VALUE], request.data_size, request.data.rgb_colour);
+            if (request.data_size <= 100) {
+                esp_ble_gatts_set_attr_value(attribute_handle_table[LIGHTNING_INFO_CHAR_VALUE], request.data_size, request.data.device_name);            
+            } else {
+                ESP_LOGE(BLE_TAG, "Name to large. Max length is 100 characters.");
+            }
             break;
         case BLE_CMD_SET_MOTION_TIMEOUT:
-            ESP_LOGI(GATTS_TABLE_TAG, "Command: BLE_CMD_SET_MOTION_TIMEOUT (%d)", BLE_CMD_SET_MOTION_TIMEOUT);
+            ESP_LOGI(BLE_TAG, "Command: BLE_CMD_SET_MOTION_TIMEOUT (%d)", BLE_CMD_SET_MOTION_TIMEOUT);
 
             if (request.data_size == 2) {
                 switch_control_set_motion_timeout(__htons(request.data.motion_timeout));
             } else {
-                ESP_LOGE(GATTS_TABLE_TAG, "Invalid data size: %d", request.data_size);
+                ESP_LOGE(BLE_TAG, "Invalid data size: %d", request.data_size);
             }
     }
 }
@@ -365,21 +372,21 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
         case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
             /* advertising start complete event to indicate advertising start successfully or failed */
             if (param->adv_start_cmpl.status != ESP_BT_STATUS_SUCCESS) {
-                ESP_LOGE(GATTS_TABLE_TAG, "advertising start failed");
+                ESP_LOGE(BLE_TAG, "advertising start failed");
             }else{
-                ESP_LOGI(GATTS_TABLE_TAG, "advertising start successfully");
+                ESP_LOGI(BLE_TAG, "advertising start successfully");
             }
             break;
         case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
             if (param->adv_stop_cmpl.status != ESP_BT_STATUS_SUCCESS) {
-                ESP_LOGE(GATTS_TABLE_TAG, "Advertising stop failed");
+                ESP_LOGE(BLE_TAG, "Advertising stop failed");
             }
             else {
-                ESP_LOGI(GATTS_TABLE_TAG, "Stop adv successfully\n");
+                ESP_LOGI(BLE_TAG, "Stop adv successfully\n");
             }
             break;
         case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
-            ESP_LOGI(GATTS_TABLE_TAG, "update connection params status = %d, min_int = %d, max_int = %d,conn_int = %d,latency = %d, timeout = %d",
+            ESP_LOGI(BLE_TAG, "update connection params status = %d, min_int = %d, max_int = %d,conn_int = %d,latency = %d, timeout = %d",
                   param->update_conn_params.status,
                   param->update_conn_params.min_int,
                   param->update_conn_params.max_int,
@@ -398,30 +405,30 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
         case ESP_GATTS_REG_EVT:{
             esp_err_t set_dev_name_ret = esp_ble_gap_set_device_name(SAMPLE_DEVICE_NAME);
             if (set_dev_name_ret){
-                ESP_LOGE(GATTS_TABLE_TAG, "set device name failed, error code = %x", set_dev_name_ret);
+                ESP_LOGE(BLE_TAG, "set device name failed, error code = %x", set_dev_name_ret);
             }
             //config adv data
             esp_err_t ret = esp_ble_gap_config_adv_data(&adv_data);
             if (ret){
-                ESP_LOGE(GATTS_TABLE_TAG, "config adv data failed, error code = %x", ret);
+                ESP_LOGE(BLE_TAG, "config adv data failed, error code = %x", ret);
             }
             adv_config_done |= ADV_CONFIG_FLAG;
             esp_err_t create_attr_ret = esp_ble_gatts_create_attr_tab(gatt_db, gatts_if, NUM_ATTRIBUTES, SVC_INST_ID);
             if (create_attr_ret){
-                ESP_LOGE(GATTS_TABLE_TAG, "create attr table failed, error code = %x", create_attr_ret);
+                ESP_LOGE(BLE_TAG, "create attr table failed, error code = %x", create_attr_ret);
             }
         }
        	    break;
         case ESP_GATTS_READ_EVT:
-            ESP_LOGI(GATTS_TABLE_TAG, "ESP_GATTS_READ_EVT");
+            ESP_LOGI(BLE_TAG, "ESP_GATTS_READ_EVT");
        	    break;
         case ESP_GATTS_WRITE_EVT:
             // the data length of gattc write  must be less than GATTS_DEMO_CHAR_VAL_LEN_MAX.
-            ESP_LOGI(GATTS_TABLE_TAG, "GATT_WRITE_EVT, handle = %d, value len = %d, value :", param->write.handle, param->write.len);
-            esp_log_buffer_hex(GATTS_TABLE_TAG, param->write.value, param->write.len);
+            ESP_LOGI(BLE_TAG, "GATT_WRITE_EVT, handle = %d, value len = %d, value :", param->write.handle, param->write.len);
+            esp_log_buffer_hex(BLE_TAG, param->write.value, param->write.len);
 
             if (param->write.handle == attribute_handle_table[LIGHTNING_CONTROL_CHAR_VALUE]) {
-                ESP_LOGI(GATTS_TABLE_TAG, "Write to control characteristic");
+                ESP_LOGI(BLE_TAG, "Write to control characteristic");
 
                 control_char_write(param);
             }
@@ -430,7 +437,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             if (attribute_handle_table[LIGHTNING_CONTROL_CHAR_CCCD] == param->write.handle && param->write.len == 2){
                 uint16_t descr_value = param->write.value[1]<<8 | param->write.value[0];
                 if (descr_value == 0x0001){
-                    ESP_LOGI(GATTS_TABLE_TAG, "notify enable");
+                    ESP_LOGI(BLE_TAG, "notify enable");
                     uint8_t notify_data[15];
                     for (int i = 0; i < sizeof(notify_data); ++i)
                     {
@@ -440,7 +447,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
                     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, attribute_handle_table[LIGHTNING_CONTROL_CHAR_VALUE],
                                             sizeof(notify_data), notify_data, false);
                 }else if (descr_value == 0x0002){
-                    ESP_LOGI(GATTS_TABLE_TAG, "indicate enable");
+                    ESP_LOGI(BLE_TAG, "indicate enable");
                     uint8_t indicate_data[15];
                     for (int i = 0; i < sizeof(indicate_data); ++i)
                     {
@@ -451,10 +458,10 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
                                         sizeof(indicate_data), indicate_data, true);
                 }
                 else if (descr_value == 0x0000){
-                    ESP_LOGI(GATTS_TABLE_TAG, "notify/indicate disable ");
+                    ESP_LOGI(BLE_TAG, "notify/indicate disable ");
                 }else{
-                    ESP_LOGE(GATTS_TABLE_TAG, "unknown descr value");
-                    esp_log_buffer_hex(GATTS_TABLE_TAG, param->write.value, param->write.len);
+                    ESP_LOGE(BLE_TAG, "unknown descr value");
+                    esp_log_buffer_hex(BLE_TAG, param->write.value, param->write.len);
                 }
 
                 /* send response when param->write.need_rsp is true*/
@@ -464,17 +471,17 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             }
       	    break;
         case ESP_GATTS_MTU_EVT:
-            ESP_LOGI(GATTS_TABLE_TAG, "ESP_GATTS_MTU_EVT, MTU %d", param->mtu.mtu);
+            ESP_LOGI(BLE_TAG, "ESP_GATTS_MTU_EVT, MTU %d", param->mtu.mtu);
             break;
         case ESP_GATTS_CONF_EVT:
-            ESP_LOGI(GATTS_TABLE_TAG, "ESP_GATTS_CONF_EVT, status = %d, attr_handle %d", param->conf.status, param->conf.handle);
+            ESP_LOGI(BLE_TAG, "ESP_GATTS_CONF_EVT, status = %d, attr_handle %d", param->conf.status, param->conf.handle);
             break;
         case ESP_GATTS_START_EVT:
-            ESP_LOGI(GATTS_TABLE_TAG, "SERVICE_START_EVT, status %d, service_handle %d", param->start.status, param->start.service_handle);
+            ESP_LOGI(BLE_TAG, "SERVICE_START_EVT, status %d, service_handle %d", param->start.status, param->start.service_handle);
             break;
         case ESP_GATTS_CONNECT_EVT:
-            ESP_LOGI(GATTS_TABLE_TAG, "ESP_GATTS_CONNECT_EVT, conn_id = %d", param->connect.conn_id);
-            esp_log_buffer_hex(GATTS_TABLE_TAG, param->connect.remote_bda, 6);
+            ESP_LOGI(BLE_TAG, "ESP_GATTS_CONNECT_EVT, conn_id = %d", param->connect.conn_id);
+            esp_log_buffer_hex(BLE_TAG, param->connect.remote_bda, 6);
             esp_ble_conn_update_params_t conn_params = {0};
             memcpy(conn_params.bda, param->connect.remote_bda, sizeof(esp_bd_addr_t));
             /* For the iOS system, please refer to Apple official documents about the BLE connection parameters restrictions. */
@@ -489,7 +496,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             led_on();
             break;
         case ESP_GATTS_DISCONNECT_EVT:
-            ESP_LOGI(GATTS_TABLE_TAG, "ESP_GATTS_DISCONNECT_EVT, reason = 0x%x", param->disconnect.reason);
+            ESP_LOGI(BLE_TAG, "ESP_GATTS_DISCONNECT_EVT, reason = 0x%x", param->disconnect.reason);
             esp_ble_gap_start_advertising(&adv_params);
 
             // turn off the connection LED
@@ -497,14 +504,14 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             break;
         case ESP_GATTS_CREAT_ATTR_TAB_EVT:{
             if (param->add_attr_tab.status != ESP_GATT_OK){
-                ESP_LOGE(GATTS_TABLE_TAG, "create attribute table failed, error code=0x%x", param->add_attr_tab.status);
+                ESP_LOGE(BLE_TAG, "create attribute table failed, error code=0x%x", param->add_attr_tab.status);
             }
             else if (param->add_attr_tab.num_handle != NUM_ATTRIBUTES){
-                ESP_LOGE(GATTS_TABLE_TAG, "create attribute table abnormally, num_handle (%d) \
+                ESP_LOGE(BLE_TAG, "create attribute table abnormally, num_handle (%d) \
                         doesn't equal to HRS_IDX_NB(%d)", param->add_attr_tab.num_handle, NUM_ATTRIBUTES);
             }
             else {
-                ESP_LOGI(GATTS_TABLE_TAG, "create attribute table successfully, the number handle = %d\n",param->add_attr_tab.num_handle);
+                ESP_LOGI(BLE_TAG, "create attribute table successfully, the number handle = %d\n",param->add_attr_tab.num_handle);
                 memcpy(attribute_handle_table, param->add_attr_tab.handles, sizeof(attribute_handle_table));
                 esp_ble_gatts_start_service(attribute_handle_table[LIGHTNING_SRVC]);
             }

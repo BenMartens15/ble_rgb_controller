@@ -13,6 +13,7 @@
 
 /* DEFINES ********************************************************************/
 #define SWITCH_CONTROLLER_TAG           "SWITCH_CONTROLLER"
+#define SWITCH_CONTROLLER_LOG_LEVEL     ESP_LOG_INFO
 
 #define SERVO_MIN_PULSEWIDTH_US         500 // Minimum pulse width in microsecond
 #define SERVO_MAX_PULSEWIDTH_US         2500 // Maximum pulse width in microsecond
@@ -57,6 +58,8 @@ static void pir_sensor_interrupt_handler(void * arg);
 /* PUBLIC FUNCTIONS ***********************************************************/
 void switch_control_init(void)
 {
+    esp_log_level_set(SWITCH_CONTROLLER_TAG, SWITCH_CONTROLLER_LOG_LEVEL);
+
     ESP_LOGI(SWITCH_CONTROLLER_TAG, "Create timer and operator");
     mcpwm_timer_handle_t timer = NULL;
     mcpwm_timer_config_t timer_config = {
@@ -184,8 +187,6 @@ static void pir_sensor_task(void* arg)
     uint32_t io_num;
     for(;;) {
         if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
-            ESP_LOGD(SWITCH_CONTROLLER_TAG, "GPIO[%"PRIu32"] intr, val: %d", io_num, gpio_get_level(io_num));
-
             // reset the motion timer every time movement is detected
             if (esp_timer_is_active(m_motion_timer) == true) {
                 ESP_ERROR_CHECK(esp_timer_restart(m_motion_timer, SECONDS_TO_MICROSECONDS(m_motion_timeout_period)));
