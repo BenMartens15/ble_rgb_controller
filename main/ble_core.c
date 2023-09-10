@@ -68,6 +68,7 @@ static uint8_t info_char_uuid[ESP_UUID_LEN_128] = {
 ble_mfg_adv_data_t mfg_adv_data = {
     .company_id = 0xffff,
     .light_state = false,
+    .pir_enabled = true
 };
 
 /* The length of adv data must be less than 31 bytes */
@@ -274,7 +275,8 @@ void ble_init(void)
 
 void ble_update_adv_data(void)
 {
-    mfg_adv_data.light_state = switch_control_get_state();
+    mfg_adv_data.light_state = switch_control_get_switch_state();
+    mfg_adv_data.pir_enabled = switch_control_get_pir_state();
 
     esp_ble_gap_config_adv_data(&adv_data);
 }

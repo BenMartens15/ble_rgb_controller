@@ -43,6 +43,7 @@ enum
 typedef struct {
     uint16_t company_id;
     bool light_state;
+    bool pir_enabled;
     uint8_t device_type;
     uint8_t data[4];
 } ble_mfg_adv_data_t;

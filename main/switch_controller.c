@@ -157,7 +157,7 @@ void switch_control_set_switch_state(on_off_state_e state)
         }
     }
     ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(m_comparator, example_angle_to_compare(servo_angle)));
-    vTaskDelay(pdMS_TO_TICKS(2000));
+    vTaskDelay(pdMS_TO_TICKS(500));
     ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(m_comparator, example_angle_to_compare(NEUTRAL_POS)));
 
     ble_update_adv_data();
@@ -176,12 +176,20 @@ void switch_control_set_pir_state(on_off_state_e state)
             ESP_ERROR_CHECK(esp_timer_stop(m_motion_timer));
         }
     }
+
+    ble_update_adv_data();
 }
 
-on_off_state_e switch_control_get_state(void)
+on_off_state_e switch_control_get_switch_state(void)
 {
     return m_switch_state;
 }
+
+on_off_state_e switch_control_get_pir_state(void)
+{
+    return m_pir_state;
+}
+
 
 void switch_control_set_motion_timeout(uint16_t timeout)
 {
