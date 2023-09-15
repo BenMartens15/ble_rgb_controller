@@ -169,6 +169,9 @@ void switch_control_set_pir_state(on_off_state_e state)
     if (state == ON) {
         ESP_LOGI(SWITCH_CONTROLLER_TAG, "Enabling PIR sensor");
         gpio_intr_enable(PIR_INT_PIN);
+        if (esp_timer_is_active(m_motion_timer) == false) {
+            ESP_ERROR_CHECK(esp_timer_start_periodic(m_motion_timer, SECONDS_TO_MICROSECONDS(m_motion_timeout_period)));
+        }
     } else {
         ESP_LOGI(SWITCH_CONTROLLER_TAG, "Disabling PIR sensor");
         gpio_intr_disable(PIR_INT_PIN);
