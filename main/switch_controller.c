@@ -146,13 +146,13 @@ void switch_control_set_switch_state(on_off_state_e state)
     if (state == ON) {
         servo_angle = NEUTRAL_POS + PUSH_SWITCH_POS;
         // start the motion timer
-        if (m_pir_state == ON) {
+        if (m_pir_state == ON && esp_timer_is_active(m_motion_timer) == false) {
             ESP_ERROR_CHECK(esp_timer_start_periodic(m_motion_timer, SECONDS_TO_MICROSECONDS(m_motion_timeout_period)));
         }
     } else {
         servo_angle = NEUTRAL_POS - PUSH_SWITCH_POS;
         // stop the motion timer
-        if (m_pir_state == ON) {
+        if (m_pir_state == ON && esp_timer_is_active(m_motion_timer) == true) {
             ESP_ERROR_CHECK(esp_timer_stop(m_motion_timer));
         }
     }
