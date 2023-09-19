@@ -1,5 +1,5 @@
-#ifndef FILE_H
-#define FILE_H
+#ifndef BLE_CORE_H
+#define BLE_CORE_H
 
 /* INCLUDES *******************************************************************/
 #include <stdio.h>
@@ -18,12 +18,6 @@
 /******************************************************************************/
 
 /* ENUMS **********************************************************************/
-enum
-{
-    RGB_CONTROLLER,
-    LIGHT_SWITCH
-};
-
 enum
 {
     LIGHTNING_SRVC,
@@ -68,4 +62,4 @@ void ble_init(void);
 void ble_update_adv_data(void);
 /******************************************************************************/
 
-#endif /* #ifndef FILE_H */
+#endif /* #ifndef BLE_CORE_H */

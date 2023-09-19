@@ -45,18 +45,22 @@ on_off_state_e m_switch_state = OFF;
 on_off_state_e m_pir_state = OFF;
 esp_timer_handle_t m_motion_timer;
 uint16_t m_motion_timeout_period = 120;
-
+#if (CONFIG_DEVICE_TYPE == DEVICE_TYPE_SWITCH_CONTROLLER)
 static QueueHandle_t gpio_evt_queue = NULL;
+#endif
 /******************************************************************************/
 
 /* PROTOTYPES *****************************************************************/
+static inline uint32_t angle_to_compare(uint8_t angle);
+#if (CONFIG_DEVICE_TYPE == DEVICE_TYPE_SWITCH_CONTROLLER)
 static void motion_timeout(void * unused);
-static inline uint32_t example_angle_to_compare(uint8_t angle);
 static void pir_sensor_task(void* arg);
 static void pir_sensor_interrupt_handler(void * arg);
+#endif
 /******************************************************************************/
 
 /* PUBLIC FUNCTIONS ***********************************************************/
+#if (CONFIG_DEVICE_TYPE == DEVICE_TYPE_SWITCH_CONTROLLER)
 void switch_control_init(void)
 {
     esp_log_level_set(SWITCH_CONTROLLER_TAG, SWITCH_CONTROLLER_LOG_LEVEL);
@@ -94,7 +98,7 @@ void switch_control_init(void)
     ESP_ERROR_CHECK(mcpwm_new_generator(oper, &generator_config, &generator));
 
     // set the initial compare value, so that the servo will spin to the center position
-    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(m_comparator, example_angle_to_compare(NEUTRAL_POS)));
+    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(m_comparator, angle_to_compare(NEUTRAL_POS)));
 
     ESP_LOGI(SWITCH_CONTROLLER_TAG, "Set generator action on timer and compare event");
     // go high on counter empty
@@ -156,9 +160,9 @@ void switch_control_set_switch_state(on_off_state_e state)
             ESP_ERROR_CHECK(esp_timer_stop(m_motion_timer));
         }
     }
-    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(m_comparator, example_angle_to_compare(servo_angle)));
+    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(m_comparator, angle_to_compare(servo_angle)));
     vTaskDelay(pdMS_TO_TICKS(500));
-    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(m_comparator, example_angle_to_compare(NEUTRAL_POS)));
+    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(m_comparator, angle_to_compare(NEUTRAL_POS)));
 
     ble_update_adv_data();
 }
@@ -193,26 +197,27 @@ on_off_state_e switch_control_get_pir_state(void)
     return m_pir_state;
 }
 
-
 void switch_control_set_motion_timeout(uint16_t timeout)
 {
     ESP_LOGI(SWITCH_CONTROLLER_TAG, "Setting motion timeout to %d seconds", timeout);
     m_motion_timeout_period = timeout;
 }
+#endif
 /******************************************************************************/ 
 
 /* PRIVATE FUNCTIONS **********************************************************/
+static inline uint32_t angle_to_compare(uint8_t angle)
+{
+    return (angle - SERVO_MIN_DEGREE) * (SERVO_MAX_PULSEWIDTH_US - SERVO_MIN_PULSEWIDTH_US) / (SERVO_MAX_DEGREE - SERVO_MIN_DEGREE) + SERVO_MIN_PULSEWIDTH_US;
+}
+
+#if (CONFIG_DEVICE_TYPE == DEVICE_TYPE_SWITCH_CONTROLLER)
 static void motion_timeout(void * unused)
 {
     if (m_switch_state == ON) {
         ESP_LOGI(SWITCH_CONTROLLER_TAG, "No motion detected in the last %d seconds. Turning switch off.", m_motion_timeout_period);
         switch_control_set_switch_state(OFF);
     }
-}
-
-static inline uint32_t example_angle_to_compare(uint8_t angle)
-{
-    return (angle - SERVO_MIN_DEGREE) * (SERVO_MAX_PULSEWIDTH_US - SERVO_MIN_PULSEWIDTH_US) / (SERVO_MAX_DEGREE - SERVO_MIN_DEGREE) + SERVO_MIN_PULSEWIDTH_US;
 }
 
 static void pir_sensor_task(void* arg)
@@ -239,4 +244,5 @@ static void IRAM_ATTR pir_sensor_interrupt_handler(void * arg)
     uint32_t gpio_num = (uint32_t) arg;
     xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
 }
+#endif
 /******************************************************************************/

@@ -303,6 +303,7 @@ static void control_char_write(esp_ble_gatts_cb_param_t *param)
     esp_log_buffer_hex(BLE_TAG, request.data.rgb_colour, request.data_size);
 
     switch (request.command) {
+        #if (CONFIG_DEVICE_TYPE == DEVICE_TYPE_SWITCH_CONTROLLER)
         case BLE_CMD_SET_LIGHT_STATE:
             ESP_LOGI(BLE_TAG, "Command: BLE_CMD_SET_LIGHT_STATE (%d)", BLE_CMD_SET_LIGHT_STATE);
 
@@ -316,6 +317,8 @@ static void control_char_write(esp_ble_gatts_cb_param_t *param)
                 ESP_LOGE(BLE_TAG, "Invalid data size: %d", request.data_size);
             }
             break;
+        #endif
+        #if (CONFIG_DEVICE_TYPE == DEVICE_TYPE_RGB_CONTROLLER)
         case BLE_CMD_SET_RGB_COLOUR:
             ESP_LOGI(BLE_TAG, "Command: BLE_CMD_SET_RGB_COLOUR (%d)", BLE_CMD_SET_RGB_COLOUR);
             
@@ -336,6 +339,7 @@ static void control_char_write(esp_ble_gatts_cb_param_t *param)
         case BLE_CMD_SET_RGB_BRIGHTNESS:
             ESP_LOGI(BLE_TAG, "Command: BLE_CMD_SET_RGB_BRIGHTNESS (%d)", BLE_CMD_SET_RGB_BRIGHTNESS);
             break;
+        #endif
         case BLE_CMD_SET_DEVICE_NAME:
             ESP_LOGI(BLE_TAG, "Command: BLE_CMD_SET_DEVICE_NAME (%d)", BLE_CMD_SET_DEVICE_NAME);
 
@@ -345,6 +349,7 @@ static void control_char_write(esp_ble_gatts_cb_param_t *param)
                 ESP_LOGE(BLE_TAG, "Name to large. Max length is 100 characters.");
             }
             break;
+        #if (CONFIG_DEVICE_TYPE == DEVICE_TYPE_SWITCH_CONTROLLER)
         case BLE_CMD_SET_MOTION_TIMEOUT:
             ESP_LOGI(BLE_TAG, "Command: BLE_CMD_SET_MOTION_TIMEOUT (%d)", BLE_CMD_SET_MOTION_TIMEOUT);
 
@@ -366,6 +371,10 @@ static void control_char_write(esp_ble_gatts_cb_param_t *param)
             } else {
                 ESP_LOGE(BLE_TAG, "Invalid data size: %d", request.data_size);
             }
+            break;
+        #endif
+        default:
+            ESP_LOGE(BLE_TAG, "Unknown command (%d)", request.command);
             break;
     }
 }

@@ -35,6 +35,7 @@
 /******************************************************************************/
 
 /* PUBLIC FUNCTIONS ***********************************************************/
+#if (CONFIG_DEVICE_TYPE == DEVICE_TYPE_RGB_CONTROLLER)
 void rgb_control_pwm_init()
 {
     esp_log_level_set(RGB_CONTROLLER_TAG, RGB_CONTROLLER_LOG_LEVEL);
@@ -102,6 +103,7 @@ void rgb_control_set_colour(uint8_t * value)
     ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_2, value[2]);
     ledc_update_duty(LEDC_MODE, LEDC_CHANNEL_2);
 }
+#endif
 /******************************************************************************/
 
 /* PRIVATE FUNCTIONS **********************************************************/
