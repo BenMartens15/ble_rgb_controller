@@ -2,7 +2,7 @@
 # in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "1.1.0")
+set(PROJECT_VER "1.2.0")
 set(PROJECT_VERU ${PROJECT_VER})
 set(PROJECT_PREF "ble_rgb_controller")
 
