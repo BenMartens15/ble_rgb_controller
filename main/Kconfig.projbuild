@@ -1,14 +1,21 @@
-menu "Example 'GATT SERVER' Config"
-
-    config SET_RAW_ADV_DATA
-        bool "Use raw data for advertising packets and scan response data"
+menu "Lightning Light Controller"
+   
+    choice
+        prompt "Device Type"
         help
-            If this config item is set, raw binary data will be used to generate advertising & scan response data.
-            This option uses the esp_ble_gap_config_adv_data_raw() and esp_ble_gap_config_scan_rsp_data_raw()
-            functions.
+            The device type to build for.
+    
+        config DEVICE_TYPE_RGB_CONTROLLER
+            bool "RGB Controller"
+        
+        config DEVICE_TYPE_LIGHT_SWITCH
+            bool "Light Switch"
+    
+    endchoice
 
-            If this config item is unset, advertising & scan response data is provided via a higher-level
-            esp_ble_adv_data_t structure. The lower layer will generate the BLE packets. This option has higher
-            overhead at runtime.
+    config DEVICE_TYPE
+        int
+        default 0 if DEVICE_TYPE_RGB_CONTROLLER
+        default 1 if DEVICE_TYPE_LIGHT_SWITCH
 
 endmenu
