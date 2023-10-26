@@ -11,7 +11,7 @@ A light switch controller uses:
 - a servo
 - a mounting fixture (https://www.thingiverse.com/thing:6282545)
 
-<img src="/images/light-switch-front-view.jpg"> <img src="/images/light-switch-side-view.jpg>
+<img src="/images/light-switch-front-view.jpg" width="50%"><img src="/images/light-switch-side-view.jpg" width="50%">
 
 For an RGB strip controller... every RGB strip is different, but you will probaly need a few transistors controlled by the ESP32 in order to provide enough power to control the strip.
 
